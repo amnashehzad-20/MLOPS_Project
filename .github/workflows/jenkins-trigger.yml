@@ -1,0 +1,24 @@
+name: Trigger Jenkins Build
+
+on:
+  push:
+    branches:
+      - main
+      - production
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  trigger-jenkins:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Jenkins Build
+      env:
+        JENKINS_URL: ${{ secrets.JENKINS_URL }}
+        JENKINS_USER: ${{ secrets.JENKINS_USER }}
+        JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
+      run: |
+        curl -X POST \
+          -u ${JENKINS_USER}:${JENKINS_TOKEN} \
+          ${JENKINS_URL}/job/mlops-analytics/build

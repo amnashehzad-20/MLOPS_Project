@@ -68,8 +68,37 @@ def load_model():
         model_uri = f"models:/{model_name}/{latest_version.version}"
         return mlflow.sklearn.load_model(model_uri)
 
-# Load model at startup
+# Load model at startup - delayed to allow MLflow server to initialize
 model = None
+
+def initialize_model():
+    """Initialize model loading with retry logic"""
+    global model
+    import time
+    max_retries = 5
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI', 'http://localhost:5001'))
+            model = load_model()
+            logger.info("Model successfully loaded")
+            return True
+        except Exception as e:
+            logger.warning(f"Attempt {attempt + 1}: Failed to load model: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+    
+    logger.error("Failed to load model after all retries")
+    return False
+
+# Initialize model loading on server start
+@app.before_request
+def load_model_if_needed():
+    """Load model on first request if not already loaded"""
+    global model
+    if model is None:
+        initialize_model()
 try:
     model = load_model()
     logger.info("Model successfully loaded")
