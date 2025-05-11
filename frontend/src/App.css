@@ -1,0 +1,70 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom newspaper fonts and styling */
+@layer base {
+  body {
+    font-family: 'Crimson Text', serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+/* Newspaper title styling */
+.newspaper-title {
+  font-family: 'Playfair Display', serif;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  letter-spacing: -0.05em;
+}
+
+/* Newspaper border styling */
+.newspaper-border {
+  border: 4px double #1a1a1a;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+/* Newspaper header styling */
+.newspaper-header {
+  border-bottom: 8px double #2d2d2d;
+}
+
+/* Newspaper footer styling */
+.newspaper-footer {
+  border-top: 8px double #2d2d2d;
+}
+
+/* Vintage frame effect */
+.vintage-frame {
+  border: 8px solid #f4f4f4;
+  box-shadow: 
+    0 0 0 1px #d4d4d4,
+    0 0 0 2px #f4f4f4,
+    0 0 0 3px #d4d4d4,
+    2px 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Custom input focus */
+.input:focus {
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+}
+
+/* Custom button hover */
+.btn:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* All font-serif elements should use Playfair Display */
+.font-serif {
+  font-family: 'Playfair Display', serif !important;
+}
+
+/* For italic serif text */
+.font-serif.italic {
+  font-family: 'Crimson Text', serif !important;
+  font-style: italic;
+}
