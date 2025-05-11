@@ -1,9 +1,9 @@
 schema: '2.0'
 stages:
   collect_data:
-    cmd: python scripts/collect_data.py
+    cmd: python scripts/data/collect_data.py
     deps:
-    - path: scripts/collect_data.py
+    - path: scripts/data/collect_data.py
       hash: md5
       md5: 948d65ea91b232e64ed3c3e9067782ca
       size: 4115
@@ -13,13 +13,13 @@ stages:
       md5: e1c0e0df7bb7d23f110201e60d91fe16
       size: 75809
   preprocess_data:
-    cmd: python scripts/preprocess_data.py
+    cmd: python scripts/data/preprocess_data.py
     deps:
     - path: data/raw_data.csv
       hash: md5
       md5: e1c0e0df7bb7d23f110201e60d91fe16
       size: 75809
-    - path: scripts/preprocess_data.py
+    - path: scripts/data/preprocess_data.py
       hash: md5
       md5: 6e5992e9ba4a61ccf8b111ea79f5e8f7
       size: 6745
@@ -29,13 +29,13 @@ stages:
       md5: 74d03b32427268dc3d30b5fc75c7252d
       size: 156341
   train_model:
-    cmd: python scripts/train_model.py
+    cmd: python scripts/model/train_model.py
     deps:
     - path: data/processed_data.csv
       hash: md5
       md5: 74d03b32427268dc3d30b5fc75c7252d
       size: 156341
-    - path: scripts/train_model.py
+    - path: scripts/model/train_model.py
       hash: md5
       md5: af2e4d4b98ab596ff75b29d6b712474d
       size: 6994
@@ -49,7 +49,7 @@ stages:
       md5: 43740c730d826d7ebca3fcce582cfb01
       size: 239178
   test_model:
-    cmd: python scripts/test_model.py
+    cmd: python scripts/model/test_model.py
     deps:
     - path: data/processed_data.csv
       hash: md5
@@ -59,7 +59,7 @@ stages:
       hash: md5
       md5: 43740c730d826d7ebca3fcce582cfb01
       size: 239178
-    - path: scripts/test_model.py
+    - path: scripts/model/test_model.py
       hash: md5
       md5: 0097f74cc42a08279d6b7dcbb93081c2
       size: 8744
