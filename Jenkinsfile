@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'dev', url: 'https://github.com/M-Abdullah03/MLOPS_Assignment.git'
+                git branch: 'dev', url: 'https://github.com/amnashehzad-20/MLOPS_Project.git'
             }
         }
 
