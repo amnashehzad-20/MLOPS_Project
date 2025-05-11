@@ -9,3 +9,4 @@ backend/*.pyo
 backend/*.pyd
 backend/.env
 .env
+.venv

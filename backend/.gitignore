@@ -1,0 +1,44 @@
+# Python-related
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+*.venv
+*.egg
+*.egg-info/
+dist
+build/
+*.log
+
+# Environment variables
+.env
+
+# DVC-related
+.dvc/
+*.dvc
+
+# Data files
+data/
+!data/processed_data.csv
+!data/raw_data.csv
+
+# MLflow-related
+mlruns/
+!mlruns/.trash/
+
+# Docker-related
+*.pid
+*.log
+docker-compose.override.yml
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE-specific
+.vscode/
+.idea/
+
+# OS-specific
+.DS_Store
+Thumbs.db
