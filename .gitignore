@@ -10,3 +10,4 @@ backend/*.pyd
 backend/.env
 .env
 .venv
+mlruns
