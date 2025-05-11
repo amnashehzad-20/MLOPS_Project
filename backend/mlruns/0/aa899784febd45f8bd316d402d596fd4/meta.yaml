@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/Boredaf/Documents/PersonalProjects/MLOPS_Project/backend/mlruns/0/aa899784febd45f8bd316d402d596fd4/artifacts
+end_time: 1746971583874
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: aa899784febd45f8bd316d402d596fd4
+run_name: silent-slug-574
+run_uuid: aa899784febd45f8bd316d402d596fd4
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746971575786
+status: 3
+tags: []
+user_id: Boredaf
