@@ -1,25 +1,81 @@
-import React, { useState } from 'react';
-import { FileText, Camera, Pen, MessageSquare, Image } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Clock, User, Calendar, Hash, AlertCircle, RefreshCw } from 'lucide-react';
+import API_CONFIG from '../api/config';
 
 export default function NewspaperClassifier() {
   const [features, setFeatures] = useState({
-    sentiment_score: '',
-    keyword_count: '',
-    headline_length: '',
-    readability_score: '',
-    image_count: ''
+    title_length: '',
+    description_length: '',
+    has_author: 0,
+    source_category: 0,
+    publish_hour: '',
+    publish_day: ''
   });
   
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [modelInfo, setModelInfo] = useState(null);
+  const [healthStatus, setHealthStatus] = useState(null);
+
+  // Check API health and get model info on mount
+  useEffect(() => {
+    checkHealth();
+    getModelInfo();
+  }, []);
+
+  const checkHealth = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/health`, {
+        headers: API_CONFIG.HEADERS
+      });
+      const data = await response.json();
+      setHealthStatus(data);
+    } catch (err) {
+      console.error('Health check failed:', err);
+    }
+  };
+
+  const getModelInfo = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/model-info`, {
+        headers: API_CONFIG.HEADERS
+      });
+      const data = await response.json();
+      setModelInfo(data);
+    } catch (err) {
+      console.error('Failed to get model info:', err);
+    }
+  };
 
   const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
     setFeatures({
       ...features,
-      [e.target.name]: e.target.value
+      [name]: type === 'checkbox' ? (checked ? 1 : 0) : value
     });
     setError(null);
+  };
+
+  const validateInputs = () => {
+    // Check required fields
+    if (!features.title_length || !features.publish_hour || !features.publish_day) {
+      return 'Please fill in title length, publish hour, and publish day.';
+    }
+
+    // Validate ranges
+    const hour = parseInt(features.publish_hour);
+    const day = parseInt(features.publish_day);
+    
+    if (hour < 0 || hour > 23) {
+      return 'Publish hour must be between 0 and 23';
+    }
+    
+    if (day < 1 || day > 31) {
+      return 'Publish day must be between 1 and 31';
+    }
+    
+    return null;
   };
 
   const handleSubmit = async () => {
@@ -27,39 +83,89 @@ export default function NewspaperClassifier() {
     setError(null);
     
     // Validate inputs
-    const values = Object.values(features);
-    if (values.some(val => val === '' || isNaN(parseFloat(val)))) {
-      setError('Please fill in all fields with valid numbers');
+    const validationError = validateInputs();
+    if (validationError) {
+      setError(validationError);
       setLoading(false);
       return;
     }
 
-    // Simulate API call to model
-    setTimeout(() => {
-      // Mock prediction logic based on feature values
-      const featureSum = Object.values(features).reduce((sum, val) => sum + parseFloat(val), 0);
-      let category;
-      
-      if (featureSum < 200) {
-        category = 0; // Short
-      } else if (featureSum < 400) {
-        category = 1; // Medium
-      } else {
-        category = 2; // Long
+    try {
+      const requestData = {
+        title_length: parseInt(features.title_length) || 0,
+        description_length: parseInt(features.description_length) || 0,
+        has_author: features.has_author,
+        source_category: parseInt(features.source_category) || 0,
+        publish_hour: parseInt(features.publish_hour),
+        publish_day: parseInt(features.publish_day),
+        debug: true // Enable debug info for development
+      };
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}/predict`, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify(requestData),
+        timeout: API_CONFIG.TIMEOUT
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Prediction failed');
       }
+
+      setPrediction(data);
       
-      setPrediction(category);
+    } catch (err) {
+      setError(err.message || 'Failed to make prediction');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+
+  const handleReloadModel = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/reload-model`, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setError(null);
+        getModelInfo(); // Refresh model info
+      } else {
+        setError('Failed to reload model');
+      }
+    } catch (err) {
+      setError('Failed to reload model');
+    }
   };
 
   const getCategoryInfo = (category) => {
     const categories = {
-      0: { label: 'Brief', subtitle: 'Quick Read Edition', description: 'Concise reporting for the busy reader', icon: '📰', timing: '2-5 minutes' },
-      1: { label: 'Feature', subtitle: 'Standard Edition', description: 'Comprehensive coverage with balanced depth', icon: '📄', timing: '5-10 minutes' },
-      2: { label: 'Investigation', subtitle: 'Sunday Edition', description: 'In-depth analysis and investigative journalism', icon: '📚', timing: '10+ minutes' }
+      'Short': { 
+        label: 'Brief', 
+        subtitle: 'Quick Read Edition', 
+        description: 'Concise reporting for the busy reader', 
+        icon: '📰', 
+        timing: '2-5 minutes' 
+      },
+      'Medium': { 
+        label: 'Feature', 
+        subtitle: 'Standard Edition', 
+        description: 'Comprehensive coverage with balanced depth', 
+        icon: '📄', 
+        timing: '5-10 minutes' 
+      },
+      'Long': { 
+        label: 'Investigation', 
+        subtitle: 'Sunday Edition', 
+        description: 'In-depth analysis and investigative journalism', 
+        icon: '📚', 
+        timing: '10+ minutes' 
+      }
     };
-    return categories[category] || categories[0];
+    return categories[category] || categories['Short'];
   };
 
   const currentDate = new Date().toLocaleDateString('en-US', { 
@@ -94,6 +200,27 @@ export default function NewspaperClassifier() {
         </div>
       </header>
 
+      {/* Status Bar */}
+      <div className="bg-zinc-700 text-amber-50 py-2">
+        <div className="container mx-auto px-4 flex justify-between items-center text-sm">
+          <div className="flex items-center gap-4">
+            <span className={`badge ${healthStatus?.status === 'Service healthy' ? 'badge-success' : 'badge-warning'}`}>
+              {healthStatus?.status || 'Checking...'}
+            </span>
+            {modelInfo && (
+              <span>Model v{modelInfo.version} ({modelInfo.status})</span>
+            )}
+          </div>
+          <button 
+            onClick={handleReloadModel}
+            className="btn btn-sm btn-ghost flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Reload Model
+          </button>
+        </div>
+      </div>
+
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto">
@@ -126,41 +253,21 @@ export default function NewspaperClassifier() {
                   <div className="form-control border-b border-base-300 pb-4 space-y-3 space-x-3">
                     <label className="label">
                       <span className="label-text flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
-                        <Pen className="w-4 h-4" />
-                        Sentiment Analysis
+                        <FileText className="w-4 h-4" />
+                        Title Length *
                       </span>
                     </label>
                     <input
                       type="number"
-                      step="0.01"
-                      name="sentiment_score"
-                      value={features.sentiment_score}
+                      name="title_length"
+                      value={features.title_length}
                       onChange={handleInputChange}
                       className="input input-bordered border-1 rounded-sm w-100 font-serif text-lg"
-                      placeholder="Range: -1 to 1"
+                      placeholder="Number of characters (17-210)"
+                      required
                     />
                     <label className="label">
-                      <span className="label-text-alt italic">Editorial tone measurement</span>
-                    </label>
-                  </div>
-
-                  <div className="form-control border-b border-base-300 pb-4 space-y-3 space-x-3">
-                    <label className="label">
-                      <span className="label-text flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
-                        <MessageSquare className="w-4 h-4" />
-                        Keyword Density
-                      </span>
-                    </label>
-                    <input
-                      type="number"
-                      name="keyword_count"
-                      value={features.keyword_count}
-                      onChange={handleInputChange}
-                      className="input input-bordered border-1 rounded-sm w-100 font-serif text-lg"
-                      placeholder="Total keywords found"
-                    />
-                    <label className="label">
-                      <span className="label-text-alt italic">SEO optimization metric</span>
+                      <span className="label-text-alt italic">Length of the article title in characters</span>
                     </label>
                   </div>
 
@@ -168,19 +275,38 @@ export default function NewspaperClassifier() {
                     <label className="label">
                       <span className="label-text flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
                         <FileText className="w-4 h-4" />
-                        Headline Characters
+                        Description Length
                       </span>
                     </label>
                     <input
                       type="number"
-                      name="headline_length"
-                      value={features.headline_length}
+                      name="description_length"
+                      value={features.description_length}
                       onChange={handleInputChange}
                       className="input input-bordered border-1 rounded-sm w-100 font-serif text-lg"
-                      placeholder="Character count"
+                      placeholder="Number of characters (0-260)"
                     />
                     <label className="label">
-                      <span className="label-text-alt italic">Above the fold impact</span>
+                      <span className="label-text-alt italic">Length of the article description</span>
+                    </label>
+                  </div>
+
+                  <div className="form-control border-b border-base-300 pb-4 space-y-3 space-x-3">
+                    <label className="label flex items-center cursor-pointer">
+                      <span className="label-text flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
+                        <User className="w-4 h-4" />
+                        Has Author? *
+                      </span>
+                      <input
+                        type="checkbox"
+                        name="has_author"
+                        checked={features.has_author === 1}
+                        onChange={handleInputChange}
+                        className="checkbox checkbox-accent"
+                      />
+                    </label>
+                    <label className="label">
+                      <span className="label-text-alt italic">Whether the article has an attributed author</span>
                     </label>
                   </div>
                 </div>
@@ -190,40 +316,69 @@ export default function NewspaperClassifier() {
                   <div className="form-control border-b border-base-300 pb-4 space-y-3 space-x-3">
                     <label className="label">
                       <span className="label-text flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
-                        <FileText className="w-4 h-4" />
-                        Readability Index
+                        <Hash className="w-4 h-4" />
+                        Source Category
                       </span>
                     </label>
-                    <input
-                      type="number"
-                      name="readability_score"
-                      value={features.readability_score}
+                    <select
+                      name="source_category"
+                      value={features.source_category}
                       onChange={handleInputChange}
-                      className="input input-bordered border-1 rounded-sm w-100 font-serif text-lg"
-                      placeholder="Flesch score (0-100)"
-                    />
+                      className="select select-bordered border-1 rounded-sm w-100 font-serif text-lg"
+                    >
+                      <option value={0}>Category 0</option>
+                      <option value={1}>Category 1</option>
+                      <option value={2}>Category 2</option>
+                      <option value={3}>Category 3</option>
+                    </select>
                     <label className="label">
-                      <span className="label-text-alt italic">Reader comprehension level</span>
+                      <span className="label-text-alt italic">Article category classification</span>
                     </label>
                   </div>
 
                   <div className="form-control border-b border-base-300 pb-4 space-y-3 space-x-3">
                     <label className="label">
                       <span className="label-text flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
-                        <Image className="w-4 h-4" />
-                        Visual Content
+                        <Clock className="w-4 h-4" />
+                        Publish Hour *
                       </span>
                     </label>
                     <input
                       type="number"
-                      name="image_count"
-                      value={features.image_count}
+                      name="publish_hour"
+                      value={features.publish_hour}
                       onChange={handleInputChange}
                       className="input input-bordered border-1 rounded-sm w-100 font-serif text-lg"
-                      placeholder="Number of images"
+                      placeholder="0-23"
+                      min="0"
+                      max="23"
+                      required
                     />
                     <label className="label">
-                      <span className="label-text-alt italic">Photography & illustrations</span>
+                      <span className="label-text-alt italic">Hour of publication (24-hour format)</span>
+                    </label>
+                  </div>
+
+                  <div className="form-control border-b border-base-300 pb-4 space-y-3 space-x-3">
+                    <label className="label">
+                      <span className="label-text flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
+                        <Calendar className="w-4 h-4" />
+                        Publish Day *
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      name="publish_day"
+                      value={features.publish_day}
+                      onChange={handleInputChange}
+                      className="input input-bordered border-1 rounded-sm w-100 font-serif text-lg"
+                      placeholder="1-31"
+                      min="1"
+                      max="31"
+                      required
+                    />
+                    <label className="label">
+                      <span className="label-text-alt italic">Day of the month (1-31)</span>
                     </label>
                   </div>
 
@@ -243,7 +398,7 @@ export default function NewspaperClassifier() {
               {error && (
                 <div className="alert alert-error newspaper-border">
                   <div>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <AlertCircle className="h-6 w-6" />
                     <div className="text-center w-full">
                       <p className="font-bold">⚠ CORRECTION NEEDED ⚠</p>
                       <p className="font-serif">{error}</p>
@@ -255,7 +410,7 @@ export default function NewspaperClassifier() {
           </div>
 
           {/* Prediction Result styled as newspaper announcement */}
-          {prediction !== null && (
+          {prediction && (
             <div className="mt-8">
               <div className="card bg-neutral text-neutral-content shadow-2xl">
                 <div className="card-body p-8">
@@ -265,31 +420,67 @@ export default function NewspaperClassifier() {
                   
                   <div className="card bg-base-100 text-base-content vintage-frame">
                     <div className="card-body text-center p-8">
-                      <div className="text-8xl mb-4">{getCategoryInfo(prediction).icon}</div>
+                      <div className="text-8xl mb-4">{getCategoryInfo(prediction.prediction).icon}</div>
                       <h4 className="text-4xl font-black uppercase tracking-wider mb-2">
-                        {getCategoryInfo(prediction).label}
+                        {getCategoryInfo(prediction.prediction).label}
                       </h4>
                       <p className="text-xl font-serif italic mb-4">
-                        {getCategoryInfo(prediction).subtitle}
+                        {getCategoryInfo(prediction.prediction).subtitle}
                       </p>
                       <div className="divider"></div>
                       <p className="text-lg font-serif leading-relaxed mb-4">
-                        {getCategoryInfo(prediction).description}
+                        {getCategoryInfo(prediction.prediction).description}
                       </p>
                       <p className="text-sm font-serif uppercase tracking-wide text-base-content/70">
-                        Estimated Read Time: {getCategoryInfo(prediction).timing}
+                        Estimated Read Time: {getCategoryInfo(prediction.prediction).timing}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-6 flex justify-center">
-                    <div className="card bg-warning text-warning-content">
-                      <div className="card-body p-4 text-center">
-                        <p className="font-bold">★ EXTRA! EXTRA! ★</p>
-                        <p className="font-serif text-sm">Classification confidence: High</p>
+                  {/* Warning about data imbalance */}
+                  {prediction.warning && (
+                    <div className="mt-6 flex justify-center">
+                      <div className="card bg-warning text-warning-content">
+                        <div className="card-body p-4 text-center">
+                          <p className="font-bold">★ EDITORIAL NOTE ★</p>
+                          <p className="font-serif text-sm">{prediction.warning}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Probability display */}
+                  {prediction.probabilities && (
+                    <div className="mt-6 flex justify-center">
+                      <div className="card bg-base-300">
+                        <div className="card-body p-4">
+                          <h5 className="font-bold text-center mb-2">Classification Confidence</h5>
+                          <div className="space-y-2">
+                            {Object.entries(prediction.probabilities).map(([category, probability]) => (
+                              <div key={category} className="flex justify-between items-center">
+                                <span className="font-serif">{category}:</span>
+                                <span className="font-mono">{(probability * 100).toFixed(1)}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Debug info */}
+                  {prediction.debug && (
+                    <details className="mt-6">
+                      <summary className="cursor-pointer font-bold text-sm uppercase">
+                        Technical Details (Debug Mode)
+                      </summary>
+                      <div className="mt-2 p-4 bg-base-300 rounded-lg">
+                        <pre className="text-xs overflow-x-auto">
+                          {JSON.stringify(prediction.debug, null, 2)}
+                        </pre>
+                      </div>
+                    </details>
+                  )}
                 </div>
               </div>
             </div>
@@ -302,16 +493,16 @@ export default function NewspaperClassifier() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div>
-              <h5 className="font-bold uppercase tracking-wider mb-2">Weather</h5>
-              <p className="font-serif text-sm">Cloudy with a chance of algorithms</p>
+              <h5 className="font-bold uppercase tracking-wider mb-2">API Status</h5>
+              <p className="font-serif text-sm">{healthStatus?.status || 'Checking...'}</p>
             </div>
             <div>
-              <h5 className="font-bold uppercase tracking-wider mb-2">Stock Market</h5>
-              <p className="font-serif text-sm">ML Accuracy ↑ 98.5%</p>
+              <h5 className="font-bold uppercase tracking-wider mb-2">Model Version</h5>
+              <p className="font-serif text-sm">{modelInfo ? `v${modelInfo.version}` : 'Loading...'}</p>
             </div>
             <div>
-              <h5 className="font-bold uppercase tracking-wider mb-2">Today's Puzzle</h5>
-              <p className="font-serif text-sm">What has features but no face?</p>
+              <h5 className="font-bold uppercase tracking-wider mb-2">Prediction Engine</h5>
+              <p className="font-serif text-sm">MLflow + scikit-learn</p>
             </div>
           </div>
           <div className="divider divider-neutral"></div>
