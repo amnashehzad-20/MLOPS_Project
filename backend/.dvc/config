@@ -1,0 +1,4 @@
+[core]
+    remote = news-data-remote
+['remote "news-data-remote"']
+    url = s3://news-data-dvc/dvc
