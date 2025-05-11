@@ -1,4 +1,3 @@
-# test_model.py
 import os
 import pandas as pd
 import numpy as np
@@ -8,6 +7,8 @@ import joblib
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+import mlflow
+from mlflow.tracking import MlflowClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -17,19 +18,39 @@ def test_model():
     """
     Test the trained classification model on a test set and evaluate its performance.
     """
-    model_path = os.path.join('models', 'model.pkl')
     input_path = os.path.join('data', 'processed_data.csv')
     test_metrics_path = os.path.join('metrics_test.json')
+    model_name = "news_classification_model"
     
     try:
-        # Check if model exists
-        if not os.path.exists(model_path):
-            logger.error(f"Model file not found at {model_path}")
-            return False
+        # Connect to MLflow and load the model
+        logger.info(f"Loading the latest production model from MLflow")
+        
+        # Get the latest production model
+        client = MlflowClient()
+        try:
+            production_model = client.get_latest_versions(model_name, stages=["Production"])[0]
+            logger.info(f"Found production model version {production_model.version}")
+            model_uri = f"models:/{model_name}/Production"
+            pipeline = mlflow.sklearn.load_model(model_uri)
+        except Exception as e:
+            logger.warning(f"Failed to load production model: {e}")
+            logger.info("Attempting to load latest model version instead")
             
-        # Load the model
-        logger.info(f"Loading model from {model_path}")
-        pipeline = joblib.load(model_path)
+            # Fallback: get the latest model version
+            try:
+                all_versions = client.search_model_versions(f"name='{model_name}'")
+                if not all_versions:
+                    raise ValueError(f"No model versions found for {model_name}")
+                
+                # Sort by version number (descending)
+                latest_version = sorted(all_versions, key=lambda x: int(x.version), reverse=True)[0]
+                logger.info(f"Found latest model version {latest_version.version}")
+                model_uri = f"models:/{model_name}/{latest_version.version}"
+                pipeline = mlflow.sklearn.load_model(model_uri)
+            except Exception as fallback_error:
+                logger.error(f"Failed to load any model version: {fallback_error}")
+                return False
         
         # Load processed data
         logger.info(f"Loading data from {input_path}")
@@ -117,8 +138,6 @@ def test_model():
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
         
-        # Add text annotations
-                
         # Add text annotations
         for i in range(conf_matrix.shape[0]):
             for j in range(conf_matrix.shape[1]):

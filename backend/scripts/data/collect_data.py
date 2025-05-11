@@ -94,8 +94,8 @@ def collect_news_data():
         # Add timestamp column (collection date)
         df['collection_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        # Save to CSV
         output_path = os.path.join('data', 'raw_data.csv')
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)  # Ensure the directory exists
         df.to_csv(output_path, index=False)
         
         logger.info(f"Successfully collected {len(df)} news articles and saved to {output_path}")
