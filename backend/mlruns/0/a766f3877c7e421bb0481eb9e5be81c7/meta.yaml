@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/Boredaf/Documents/PersonalProjects/MLOPS_Project/backend/mlruns/0/a766f3877c7e421bb0481eb9e5be81c7/artifacts
+end_time: 1746970293925
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: a766f3877c7e421bb0481eb9e5be81c7
+run_name: clumsy-ray-360
+run_uuid: a766f3877c7e421bb0481eb9e5be81c7
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746970293863
+status: 4
+tags: []
+user_id: Boredaf

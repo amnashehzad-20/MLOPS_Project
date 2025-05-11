@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/Boredaf/Documents/PersonalProjects/MLOPS_Project/backend/mlruns/858985248241113231/8ddeeefa0d584a9f8fec077f0a14f0fb/artifacts
+end_time: 1746971687997
+entry_point_name: ''
+experiment_id: '858985248241113231'
+lifecycle_stage: active
+run_id: 8ddeeefa0d584a9f8fec077f0a14f0fb
+run_name: adventurous-auk-939
+run_uuid: 8ddeeefa0d584a9f8fec077f0a14f0fb
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746971677544
+status: 3
+tags: []
+user_id: Boredaf
