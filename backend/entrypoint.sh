@@ -29,9 +29,11 @@ try:
                 sys.exit(1)
         else:
             print('No processed data found. Running data processing...')
-            from scripts.data.load_data import load_raw_data
-            from scripts.data.process_data import process_data
-            if load_raw_data() and process_data():
+            # Use the correct module names matching your file structure
+            from scripts.data.collect_data import collect_news_data
+            from scripts.data.preprocess_data import preprocess_data
+            
+            if collect_news_data() and preprocess_data():
                 print('Data processing completed. Training model...')
                 from scripts.model.train_model import train_model_with_mlflow
                 if train_model_with_mlflow():
