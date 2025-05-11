@@ -2,53 +2,64 @@ version: '3.8'
 
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: mlops-backend
+    build: ./backend
     ports:
-      - "5000:5000"
-      - "5002:5001"  # MLflow UI port (external:internal)
+      - "8000:8000"
     environment:
-      - FLASK_ENV=production
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/mlops.db}
-      - MLFLOW_TRACKING_URI=http://localhost:5001
-    volumes:
-      - ./backend/data:/app/data
-      - ./backend/mlruns:/app/mlruns
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - DATABASE_URL=postgresql://postgres:password@db:5432/mlops
+    depends_on:
+      - db
+      - mlflow
     networks:
       - mlops-network
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: mlops-frontend
+    build: ./frontend
     ports:
-      - "80:80"
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://backend:8000
     depends_on:
       - backend
     networks:
       - mlops-network
 
-  airflow:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: mlops-airflow
-    command: |
-      sh -c "pip install apache-airflow && airflow db init && airflow webserver & airflow scheduler"
-    ports:
-      - "8081:8080"
+  db:
+    image: postgres:14
     environment:
-      - AIRFLOW_HOME=/app
-      - AIRFLOW__CORE__DAGS_FOLDER=/app/dags
+      - POSTGRES_DB=mlops
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mlops-network
+
+  mlflow:
+    image: python:3.9-slim
+    ports:
+      - "5000:5000"
+    command: >
+      sh -c "pip install mlflow psycopg2-binary && 
+             mlflow server --backend-store-uri postgresql://postgres:password@db:5432/mlops --default-artifact-root ./mlruns --host 0.0.0.0"
+    depends_on:
+      - db
+    networks:
+      - mlops-network
+
+  airflow:
+    image: apache/airflow:2.7.1
+    ports:
+      - "8080:8080"
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://postgres:password@db:5432/mlops
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
     volumes:
-      - ./backend/dags:/app/dags
-      - ./backend/data:/app/data
-      - airflow-logs:/app/logs
-      - airflow-db:/app
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+    depends_on:
+      - db
     networks:
       - mlops-network
 
@@ -57,5 +68,4 @@ networks:
     driver: bridge
 
 volumes:
-  airflow-logs:
-  airflow-db:
+  postgres_data:
