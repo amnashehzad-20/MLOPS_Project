@@ -21,7 +21,15 @@ FROM nginx:alpine
 # Copy built files from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Create a script to inject environment variables
+COPY docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+
 # Expose port
 EXPOSE 80
 
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
