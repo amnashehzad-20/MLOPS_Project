@@ -1,0 +1,11 @@
+backend/venv
+backend/.aws
+backend/logs
+backend/*/*/__pycache__
+backend/__pycache__
+backend/*/__pycache__
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.env
+.env
