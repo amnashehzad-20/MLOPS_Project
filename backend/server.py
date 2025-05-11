@@ -99,6 +99,12 @@ def load_model_if_needed():
     global model
     if model is None:
         initialize_model()
+try:
+    model = load_model()
+    logger.info("Model successfully loaded")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    logger.error(f"Error loading model: {e}")
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -219,6 +225,7 @@ def predict():
         return jsonify(response)
         
     except Exception as e:
+        print(f"Error making prediction: {e}")
         logger.error(f"Error making prediction: {e}")
         logger.exception("Detailed error:")
         return jsonify({"error": str(e)}), 500
