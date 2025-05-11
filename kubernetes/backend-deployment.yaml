@@ -21,8 +21,6 @@ spec:
         ports:
         - containerPort: 5000
           name: flask
-        - containerPort: 5001
-          name: mlflow
         env:
         - name: MLFLOW_TRACKING_URI
           value: "http://mlflow-service:5001"

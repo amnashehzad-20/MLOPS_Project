@@ -4,9 +4,9 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "5000:5000"    # Changed from 8000:8000 to match server.py
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
       - DATABASE_URL=postgresql://postgres:password@db:5432/mlops
     depends_on:
       - db
@@ -19,7 +19,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_API_URL=http://backend:8000
+      - REACT_APP_API_URL=http://backend:5000    # Changed from 8000 to 5000
+      - VITE_API_URL=http://backend:5000        # Added for Vite
     depends_on:
       - backend
     networks:
@@ -39,10 +40,10 @@ services:
   mlflow:
     image: python:3.9-slim
     ports:
-      - "5000:5000"
+      - "5001:5001"    # Changed from 5000:5000 to avoid conflicts
     command: >
       sh -c "pip install mlflow psycopg2-binary && 
-             mlflow server --backend-store-uri postgresql://postgres:password@db:5432/mlops --default-artifact-root ./mlruns --host 0.0.0.0"
+             mlflow server --backend-store-uri postgresql://postgres:password@db:5432/mlops --default-artifact-root ./mlruns --host 0.0.0.0 --port 5001"
     depends_on:
       - db
     networks:
@@ -51,7 +52,7 @@ services:
   airflow:
     image: apache/airflow:2.7.1
     ports:
-      - "8080:8080"
+      - "8085:8080"    # Changed external port to 8085 to avoid Jenkins conflict
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://postgres:password@db:5432/mlops
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
