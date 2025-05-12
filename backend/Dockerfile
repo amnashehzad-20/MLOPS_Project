@@ -23,6 +23,7 @@ RUN mkdir -p data mlruns models
 
 # Convert Windows line endings to Unix for the entrypoint script
 RUN dos2unix entrypoint.sh && chmod +x entrypoint.sh
+RUN dos2unix simple-entrypoint.sh && chmod +x simple-entrypoint.sh
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

@@ -50,10 +50,15 @@ def load_model():
     model_name = "news_classification_model"
     try:
         # First try to get the production model
-        production_model = client.get_latest_versions(model_name, stages=["Production"])[0]
-        logger.info(f"Loading production model version {production_model.version}")
-        model_uri = f"models:/{model_name}/Production"
-        return mlflow.sklearn.load_model(model_uri)
+        production_models = client.search_model_versions(f"name='{model_name}' AND stage='Production'")
+        if production_models:
+            production_model = production_models[0]
+            logger.info(f"Loading production model version {production_model.version}")
+            model_uri = f"models:/{model_name}/Production"
+            return mlflow.sklearn.load_model(model_uri)
+        else:
+            logger.warning("No production model found")
+            raise ValueError("No production models found")
     except Exception as e:
         logger.warning(f"Failed to load production model: {e}")
         logger.info("Attempting to load latest model version instead")
@@ -61,6 +66,7 @@ def load_model():
         # Fallback: get the latest model version
         all_versions = client.search_model_versions(f"name='{model_name}'")
         if not all_versions:
+            logger.error(f"No model versions found for {model_name}")
             raise ValueError(f"No model versions found for {model_name}")
         
         latest_version = sorted(all_versions, key=lambda x: int(x.version), reverse=True)[0]
@@ -78,15 +84,34 @@ def initialize_model():
     max_retries = 5
     retry_delay = 2
     
+    # Set MLflow tracking URI first
+    mlflow_uri = os.getenv('MLFLOW_TRACKING_URI', 'http://localhost:5001')
+    logger.info(f"Setting MLflow tracking URI to {mlflow_uri}")
+    mlflow.set_tracking_uri(mlflow_uri)
+    
     for attempt in range(max_retries):
         try:
-            mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI', 'http://localhost:5001'))
+            # Check MLflow connection
+            client = MlflowClient()
+            try:
+                client.list_registered_models()
+                logger.info("Successfully connected to MLflow server")
+            except Exception as mlflow_e:
+                logger.error(f"Failed to connect to MLflow server: {mlflow_e}")
+                if attempt < max_retries - 1:
+                    logger.info(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    return False
+            
             model = load_model()
             logger.info("Model successfully loaded")
             return True
         except Exception as e:
             logger.warning(f"Attempt {attempt + 1}: Failed to load model: {e}")
             if attempt < max_retries - 1:
+                logger.info(f"Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
     
     logger.error("Failed to load model after all retries")
@@ -98,13 +123,15 @@ def load_model_if_needed():
     """Load model on first request if not already loaded"""
     global model
     if model is None:
-        initialize_model()
-try:
-    model = load_model()
-    logger.info("Model successfully loaded")
-except Exception as e:
-    print(f"Error loading model: {e}")
-    logger.error(f"Error loading model: {e}")
+        logger.info("Attempting to load model on first request")
+        if initialize_model():
+            logger.info("Model loaded successfully on first request")
+        else:
+            logger.error("Failed to load model on first request - service may not function correctly")
+
+# Initialize the model to None - it will be loaded on first request
+model = None
+logger.info("Server started, model will be loaded on first request")
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -112,8 +139,17 @@ def predict():
     API endpoint to predict content length category
     Expects a JSON with article features in the request body
     """
+    global model
+    
+    # Try to load the model if it's not loaded yet
     if model is None:
-        return jsonify({"error": "Model not loaded"}), 500
+        logger.warning("Model not loaded when predict was called, attempting to load now")
+        if not initialize_model():
+            logger.error("Failed to load model when predict was called")
+            return jsonify({
+                "error": "Model could not be loaded. Please try again later or contact support.",
+                "details": "The model service is encountering issues with MLflow connectivity or model registration."
+            }), 500
     
     try:
         # Get data from request

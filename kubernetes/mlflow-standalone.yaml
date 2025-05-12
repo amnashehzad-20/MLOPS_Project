@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mlflow-deployment
+  name: mlflow-standalone
   labels:
     app: mlflow
 spec:
@@ -16,34 +16,36 @@ spec:
     spec:
       containers:
       - name: mlflow
-        image: ghcr.io/mlflow/mlflow:v2.10.2
+        image: python:3.11-slim
         ports:
         - containerPort: 5001
         command:
-        - mlflow
-        - server
-        - --host=0.0.0.0
-        - --port=5001
-        - --backend-store-uri=postgresql://postgres:password@postgres-service:5432/mlops
-        - --default-artifact-root=/mlruns
-        - --serve-artifacts
-        env:
-        - name: MLFLOW_S3_ENDPOINT_URL
-          value: "http://minio:9000"
+        - sh
+        - -c
+        - |
+          pip install mlflow psycopg2-binary
+          mlflow server \
+            --host 0.0.0.0 \
+            --port 5001 \
+            --backend-store-uri sqlite:///mlflow.db \
+            --default-artifact-root /mlruns
         volumeMounts:
+        - name: mlflow-data
+          mountPath: /mlflow.db
         - name: mlflow-artifacts
           mountPath: /mlruns
         resources:
           requests:
-            memory: "512Mi"
+            memory: "256Mi"
             cpu: "250m"
           limits:
-            memory: "1Gi"
+            memory: "512Mi"
             cpu: "500m"
       volumes:
+      - name: mlflow-data
+        emptyDir: {}
       - name: mlflow-artifacts
-        persistentVolumeClaim:
-          claimName: mlflow-artifacts-pvc
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -57,14 +59,3 @@ spec:
     port: 5001
     targetPort: 5001
   type: ClusterIP
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mlflow-artifacts-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi

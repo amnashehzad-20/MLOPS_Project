@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mlflow-deployment
+  name: mlflow-simple
   labels:
-    app: mlflow
+    app: mlflow-simple
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mlflow
+      app: mlflow-simple
   template:
     metadata:
       labels:
-        app: mlflow
+        app: mlflow-simple
     spec:
       containers:
       - name: mlflow
@@ -24,47 +24,36 @@ spec:
         - server
         - --host=0.0.0.0
         - --port=5001
-        - --backend-store-uri=postgresql://postgres:password@postgres-service:5432/mlops
+        - --backend-store-uri=sqlite:///mlflow.db
         - --default-artifact-root=/mlruns
-        - --serve-artifacts
-        env:
-        - name: MLFLOW_S3_ENDPOINT_URL
-          value: "http://minio:9000"
         volumeMounts:
+        - name: mlflow-data
+          mountPath: /mlflow
         - name: mlflow-artifacts
           mountPath: /mlruns
+        workingDir: /mlflow
         resources:
           requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
             memory: "512Mi"
             cpu: "250m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
       volumes:
+      - name: mlflow-data
+        emptyDir: {}
       - name: mlflow-artifacts
-        persistentVolumeClaim:
-          claimName: mlflow-artifacts-pvc
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: mlflow-service
+  name: mlflow-simple-service
 spec:
   selector:
-    app: mlflow
+    app: mlflow-simple
   ports:
   - protocol: TCP
     port: 5001
     targetPort: 5001
   type: ClusterIP
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mlflow-artifacts-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi

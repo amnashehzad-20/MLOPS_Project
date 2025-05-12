@@ -14,11 +14,9 @@ spec:
       labels:
         app: airflow
     spec:
-      containers:
-      - name: airflow
-        image: apache/airflow:2.7.1
-        ports:
-        - containerPort: 8080
+      initContainers:
+      - name: airflow-init
+        image: apache/airflow:2.10.3
         env:
         - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
           value: "postgresql+psycopg2://postgres:password@postgres-service:5432/mlops"
@@ -28,9 +26,34 @@ spec:
         - bash
         - -c
         - |
-          airflow db init
-          airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
-          airflow webserver & airflow scheduler
+          set -e
+          echo "Waiting for database..."
+          until pg_isready -h postgres-service -p 5432 -U postgres; do
+            echo "Database is unavailable - sleeping"
+            sleep 2
+          done
+          echo "Database is up - executing commands"
+          airflow db migrate
+          airflow users create \
+            --username admin \
+            --password admin \
+            --firstname Admin \
+            --lastname User \
+            --role Admin \
+            --email admin@example.com || echo "Admin user already exists"
+      containers:
+      - name: airflow-webserver
+        image: apache/airflow:2.10.3
+        ports:
+        - containerPort: 8080
+        env:
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          value: "postgresql+psycopg2://postgres:password@postgres-service:5432/mlops"
+        - name: AIRFLOW__CORE__EXECUTOR
+          value: "LocalExecutor"
+        - name: AIRFLOW__WEBSERVER__WORKERS
+          value: "1"
+        command: ["airflow", "webserver"]
         volumeMounts:
         - name: airflow-dags
           mountPath: /opt/airflow/dags
@@ -38,11 +61,31 @@ spec:
           mountPath: /opt/airflow/logs
         resources:
           requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
             memory: "1Gi"
             cpu: "500m"
+      - name: airflow-scheduler
+        image: apache/airflow:2.10.3
+        env:
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          value: "postgresql+psycopg2://postgres:password@postgres-service:5432/mlops"
+        - name: AIRFLOW__CORE__EXECUTOR
+          value: "LocalExecutor"
+        command: ["airflow", "scheduler"]
+        volumeMounts:
+        - name: airflow-dags
+          mountPath: /opt/airflow/dags
+        - name: airflow-logs
+          mountPath: /opt/airflow/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
           limits:
-            memory: "2Gi"
-            cpu: "1000m"
+            memory: "1Gi"
+            cpu: "500m"
       volumes:
       - name: airflow-dags
         persistentVolumeClaim:
