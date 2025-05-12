@@ -1,0 +1,17 @@
+# These owners will be the default owners for everything in
+# the repo unless a later match takes precedence.
+* @amnashehzad-20
+
+# Backend code ownership
+/backend/ @amnashehzad-20
+
+# Frontend code ownership
+/frontend/ @amnashehzad-20
+
+# DevOps and CI/CD configuration
+Jenkinsfile @amnashehzad-20
+docker-compose.yml @amnashehzad-20
+/deployment/ @amnashehzad-20
+
+# Documentation
+*.md @amnashehzad-20
