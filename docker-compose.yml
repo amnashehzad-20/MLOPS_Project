@@ -13,6 +13,7 @@ services:
       - FLASK_ENV=production
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/mlops.db}
       - MLFLOW_TRACKING_URI=http://localhost:5001
+      - NEWS_API_KEY=${NEWS_API_KEY:-1a7507062c614592ab695b186fd4b9b3}
     volumes:
       - ./backend/data:/app/data
       - ./backend/mlruns:/app/mlruns

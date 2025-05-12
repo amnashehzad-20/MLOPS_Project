@@ -28,6 +28,8 @@ spec:
           value: "production"
         - name: MLFLOW_TRACKING_URI
           value: "http://localhost:5001"
+        - name: NEWS_API_KEY
+          value: "1a7507062c614592ab695b186fd4b9b3"
         volumeMounts:
         - name: data-volume
           mountPath: /app/data

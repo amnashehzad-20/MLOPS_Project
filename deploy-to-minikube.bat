@@ -1,6 +1,7 @@
 @echo off
 echo Starting Minikube deployment process...
 
+
 REM Check if Minikube is running
 minikube status
 if %ERRORLEVEL% NEQ 0 (

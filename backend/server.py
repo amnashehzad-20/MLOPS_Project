@@ -130,21 +130,22 @@ def predict():
         
         # The model was trained with these features in this order
         expected_features = ['description_length', 'title_length', 'has_author', 'source_category', 
-                           'hour_cos', 'day_sin', 'day_cos', 'weekday_sin', 'weekday_cos']
+                           'hour_sin', 'hour_cos', 'day_cos', 'weekday_sin', 'weekday_cos']
         
         # Transform the input features to match what the model expects
         transformed_data = {}
         
-        # Process time-based features (note: hour_sin is not used by the model)
+        # Process time-based features
         if 'publish_hour' in data:
             hour = data['publish_hour']
+            transformed_data['hour_sin'] = np.sin(2 * np.pi * hour / 24)
             transformed_data['hour_cos'] = np.cos(2 * np.pi * hour / 24)
         else:
+            transformed_data['hour_sin'] = 0  # Default value
             transformed_data['hour_cos'] = 0  # Default value
         
         if 'publish_day' in data:
             day = data['publish_day']
-            transformed_data['day_sin'] = np.sin(2 * np.pi * day / 31)
             transformed_data['day_cos'] = np.cos(2 * np.pi * day / 31)
             
             # Weekday calculation
@@ -160,7 +161,6 @@ def predict():
                 transformed_data['weekday_cos'] = np.cos(2 * np.pi * weekday / 7)
         else:
             # Default values for time features
-            transformed_data['day_sin'] = 0
             transformed_data['day_cos'] = 1
             transformed_data['weekday_sin'] = 0
             transformed_data['weekday_cos'] = 1
