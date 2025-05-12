@@ -36,6 +36,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: mlops-airflow
+    # Override the CMD with airflow-specific command
     command: |
       sh -c "pip install apache-airflow && airflow db init && airflow webserver & airflow scheduler"
     ports:
