@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mlops-backend
+    ports:
+      - "5000:5000"
+      - "5002:5001"  # MLflow UI port (external:internal)
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/mlops.db}
+      - MLFLOW_TRACKING_URI=http://localhost:5001
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/mlruns:/app/mlruns
+    networks:
+      - mlops-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mlops-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - mlops-network
+
+  airflow:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mlops-airflow
+    # Override the CMD with airflow-specific command
+    command: |
+      sh -c "pip install apache-airflow && airflow db init && airflow webserver & airflow scheduler"
+    ports:
+      - "8081:8080"
+    environment:
+      - AIRFLOW_HOME=/app
+      - AIRFLOW__CORE__DAGS_FOLDER=/app/dags
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    volumes:
+      - ./backend/dags:/app/dags
+      - ./backend/data:/app/data
+      - airflow-logs:/app/logs
+      - airflow-db:/app
+    networks:
+      - mlops-network
+
+networks:
+  mlops-network:
+    driver: bridge
+
+volumes:
+  airflow-logs:
+  airflow-db:

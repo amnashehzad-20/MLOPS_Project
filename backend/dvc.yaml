@@ -1,0 +1,39 @@
+# in dvc.yaml
+stages:
+  collect_data:
+    cmd: python scripts/data/collect_data.py
+    deps:
+      - scripts/data/collect_data.py
+    outs:
+      - data/raw_data.csv
+      
+  preprocess_data:
+    cmd: python scripts/data/preprocess_data.py
+    deps:
+      - scripts/data/preprocess_data.py
+      - data/raw_data.csv
+    outs:
+      - data/processed_data.csv
+      
+  train_model:
+    cmd: python scripts/model/train_model.py
+    deps:
+      - scripts/model/train_model.py
+      - data/processed_data.csv
+    outs:
+      - models/model.pkl
+    metrics:
+      - metrics.json:
+          cache: false
+          
+  test_model:
+    cmd: python scripts/model/test_model.py
+    deps:
+      - scripts/model/test_model.py
+      - data/processed_data.csv
+      - models/model.pkl
+    metrics:
+      - metrics_test.json:
+          cache: false
+    plots:
+      - models/classification_evaluation.png

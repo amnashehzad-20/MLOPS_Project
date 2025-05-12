@@ -1,0 +1,12 @@
+apache-airflow
+pandas
+scikit-learn
+dvc[s3]
+requests
+python-dotenv
+numpy
+joblib
+matplotlib
+mlflow
+flask
+flask_cors

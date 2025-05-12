@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: mlops-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlops-backend
+  template:
+    metadata:
+      labels:
+        app: mlops-backend
+    spec:
+      containers:
+      - name: mlops-backend
+        image: mlops-backend:latest
+        imagePullPolicy: Never  # Use local image
+        ports:
+        - containerPort: 5000
+          name: api
+        - containerPort: 5001
+          name: mlflow
+        env:
+        - name: FLASK_ENV
+          value: "production"
+        - name: MLFLOW_TRACKING_URI
+          value: "http://localhost:5001"
+        volumeMounts:
+        - name: data-volume
+          mountPath: /app/data
+        - name: mlruns-volume
+          mountPath: /app/mlruns
+      volumes:
+      - name: data-volume
+        emptyDir: {}
+      - name: mlruns-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: mlops-backend
+  ports:
+  - name: api
+    port: 5000
+    targetPort: 5000
+  - name: mlflow
+    port: 5001
+    targetPort: 5001
+  type: ClusterIP
